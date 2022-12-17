@@ -14,5 +14,6 @@ byteorder = { version = "1", default-features = false }
 #embedded-hal-async = { git = "https://github.com/rust-embedded/embedded-hal.git" }
 
 [features]
-default = [ "defmt" ]
+defmt-log = [ "defmt" ]
+default = [ "defmt-log" ]
 # NOTE: other posibility is "log"

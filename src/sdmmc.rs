@@ -15,7 +15,7 @@ use embedded_hal_async::spi::SpiBus;
 //#[cfg(feature = "std-log")]
 //use log::{debug, info, trace, warn};
 
-#[cfg(feature = "defmt")]
+#[cfg(feature = "defmt-log")]
 use defmt::{debug, info, trace, warn};
 
 const DEFAULT_DELAY_COUNT: u32 = 32_000;
@@ -44,7 +44,7 @@ where
     CS: OutputPin;
 
 /// The possible errors `SdMmcSpi` can generate.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
 #[derive(Debug, Copy, Clone)]
 pub enum Error {
     /// We got an error from the SPI peripheral
@@ -79,7 +79,7 @@ pub enum Error {
 }
 
 /// The possible states `SdMmcSpi` can be in.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum State {
     /// Card is not initialised
@@ -91,7 +91,7 @@ pub enum State {
 }
 
 /// The different types of card we support.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum CardType {
     SD1,
@@ -125,7 +125,7 @@ impl Delay {
 }
 
 /// Options for acquiring the card.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
 #[derive(Debug)]
 pub struct AcquireOpts {
     /// Some cards don't support CRC mode. At least a 512MiB Transcend one.

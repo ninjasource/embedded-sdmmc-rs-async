@@ -18,6 +18,7 @@ pub mod sdmmc;
 pub mod sdmmc_proto;
 
 pub use crate::blockdevice::{Block, BlockCount, BlockDevice, BlockIdx};
+pub use crate::fat::FatVolume;
 pub use crate::sdmmc::Error as SdMmcError;
 pub use crate::sdmmc::{BlockSpi, SdMmcSpi};
 
@@ -87,9 +88,8 @@ where
     NotInBlock,
 }
 
-/*
-//mod controller;
-//pub use controller::Controller;
+mod controller;
+pub use controller::Controller;
 
 /// Represents a partition with a filesystem within it.
 #[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
@@ -99,7 +99,6 @@ pub struct Volume {
     volume_type: VolumeType,
 }
 
-
 /// This enum holds the data for the various different types of filesystems we
 /// support.
 #[cfg_attr(feature = "defmt-log", derive(defmt::Format))]
@@ -107,7 +106,7 @@ pub struct Volume {
 pub enum VolumeType {
     /// FAT16/FAT32 formatted volumes.
     Fat(FatVolume),
-}*/
+}
 
 /// A `VolumeIdx` is a number which identifies a volume (or partition) on a
 /// disk. `VolumeIdx(0)` is the first primary partition on an MBR partitioned

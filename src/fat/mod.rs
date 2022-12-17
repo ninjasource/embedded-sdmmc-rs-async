@@ -17,12 +17,12 @@ pub enum FatType {
 mod bpb;
 mod info;
 mod ondiskdirentry;
-//mod volume;
+mod volume;
 
 pub use bpb::Bpb;
 pub use info::{Fat16Info, Fat32Info, FatSpecificInfo, InfoSector};
 pub use ondiskdirentry::OnDiskDirEntry;
-//pub use volume::{parse_volume, FatVolume, VolumeName};
+pub use volume::{parse_volume, FatVolume, VolumeName};
 
 #[cfg(test)]
 mod test {
