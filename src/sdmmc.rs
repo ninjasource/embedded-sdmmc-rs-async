@@ -406,3 +406,207 @@ where
         Ok(())
     }
 }
+
+impl<U: BlockDevice, T: Deref<Target = U>> BlockDevice for T {
+    type Error = U::Error;
+    async fn read(
+        &self,
+        blocks: &mut [Block],
+        start_block_idx: BlockIdx,
+        _reason: &str,
+    ) -> Result<(), Self::Error> {
+        self.deref().read(blocks, start_block_idx, _reason).await
+    }
+
+    /// Write one or more blocks, starting at the given block index.
+    async fn write(&self, blocks: &[Block], start_block_idx: BlockIdx) -> Result<(), Self::Error> {
+        self.deref().write(blocks, start_block_idx).await
+    }
+
+    async fn num_blocks(&self) -> Result<BlockCount, Self::Error> {
+        self.deref().num_blocks().await
+    }
+}
+
+impl<SPI, CS> BlockSpi<'_, SPI, CS>
+where
+    SPI: SpiBus<u8>,
+    CS: OutputPin,
+{
+    async fn read_inner(
+        &self,
+        blocks: &mut [Block],
+        start_block_idx: BlockIdx,
+    ) -> Result<(), Error> {
+        let start_idx = match self.0.card_type {
+            CardType::SD1 | CardType::SD2 => start_block_idx.0 * 512,
+            CardType::SDHC => start_block_idx.0,
+        };
+
+        if blocks.len() == 1 {
+            // Start a single-block read
+            self.0.card_command(CMD17, start_idx).await?;
+            self.read_data(&mut blocks[0].contents).await?;
+        } else {
+            // Start a multi-block read
+            self.0.card_command(CMD18, start_idx).await?;
+            for block in blocks.iter_mut() {
+                self.read_data(&mut block.contents).await?;
+            }
+            // Stop the read
+            self.0.card_command(CMD12, 0).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Write one or more blocks, starting at the given block index.
+    async fn write_inner(&self, blocks: &[Block], start_block_idx: BlockIdx) -> Result<(), Error> {
+        let start_idx = match self.0.card_type {
+            CardType::SD1 | CardType::SD2 => start_block_idx.0 * 512,
+            CardType::SDHC => start_block_idx.0,
+        };
+
+        if blocks.len() == 1 {
+            // Start a single-block write
+            self.0.card_command(CMD24, start_idx).await?;
+            self.write_data(DATA_START_BLOCK, &blocks[0].contents)
+                .await?;
+            self.0.wait_not_busy().await?;
+            if self.0.card_command(CMD13, 0).await? != 0x00 {
+                return Err(Error::WriteError);
+            }
+            if self.0.receive().await? != 0x00 {
+                return Err(Error::WriteError);
+            }
+        } else {
+            // Start a multi-block write
+            self.0.card_command(CMD25, start_idx).await?;
+            for block in blocks.iter() {
+                self.0.wait_not_busy().await?;
+                self.write_data(WRITE_MULTIPLE_TOKEN, &block.contents)
+                    .await?;
+            }
+            // Stop the write
+            self.0.wait_not_busy().await?;
+            self.0.send(STOP_TRAN_TOKEN).await?;
+        }
+        Ok(())
+    }
+
+    /// Read the 'card specific data' block.
+    async fn read_csd(&self) -> Result<Csd, Error> {
+        match self.0.card_type {
+            CardType::SD1 => {
+                let mut csd = CsdV1::new();
+                if self.0.card_command(CMD9, 0).await? != 0 {
+                    return Err(Error::RegisterReadError);
+                }
+                self.read_data(&mut csd.data).await?;
+                Ok(Csd::V1(csd))
+            }
+            CardType::SD2 | CardType::SDHC => {
+                let mut csd = CsdV2::new();
+                if self.0.card_command(CMD9, 0).await? != 0 {
+                    return Err(Error::RegisterReadError);
+                }
+                self.read_data(&mut csd.data).await?;
+                Ok(Csd::V2(csd))
+            }
+        }
+    }
+
+    /// Return the usable size of this SD card in bytes.
+    pub async fn card_size_bytes(&self) -> Result<u64, Error> {
+        let csd = self.read_csd().await?;
+        match csd {
+            Csd::V1(ref contents) => Ok(contents.card_capacity_bytes()),
+            Csd::V2(ref contents) => Ok(contents.card_capacity_bytes()),
+        }
+    }
+
+    /// Read an arbitrary number of bytes from the card. Always fills the
+    /// given buffer, so make sure it's the right size.
+    async fn read_data(&self, buffer: &mut [u8]) -> Result<(), Error> {
+        // Get first non-FF byte.
+        let mut delay = Delay::new();
+        let status = loop {
+            let s = self.0.receive().await?;
+            if s != 0xFF {
+                break s;
+            }
+            delay.delay(Error::TimeoutReadBuffer)?;
+        };
+        if status != DATA_START_BLOCK {
+            return Err(Error::ReadError);
+        }
+
+        for b in buffer.iter_mut() {
+            *b = self.0.receive().await?;
+        }
+
+        let mut crc = u16::from(self.0.receive().await?);
+        crc <<= 8;
+        crc |= u16::from(self.0.receive().await?);
+
+        let calc_crc = crc16(buffer);
+        if crc != calc_crc {
+            return Err(Error::CrcError(crc, calc_crc));
+        }
+
+        Ok(())
+    }
+
+    /// Write an arbitrary number of bytes to the card.
+    async fn write_data(&self, token: u8, buffer: &[u8]) -> Result<(), Error> {
+        let calc_crc = crc16(buffer);
+        self.0.send(token).await?;
+        for &b in buffer.iter() {
+            self.0.send(b).await?;
+        }
+        self.0.send((calc_crc >> 8) as u8).await?;
+        self.0.send(calc_crc as u8).await?;
+        let status = self.0.receive().await?;
+        if (status & DATA_RES_MASK) != DATA_RES_ACCEPTED {
+            Err(Error::WriteError)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl<SPI, CS> BlockDevice for BlockSpi<'_, SPI, CS>
+where
+    SPI: SpiBus<u8>,
+    CS: OutputPin,
+{
+    type Error = Error;
+
+    /// Read one or more blocks, starting at the given block index.
+    async fn read(
+        &self,
+        blocks: &mut [Block],
+        start_block_idx: BlockIdx,
+        _reason: &str,
+    ) -> Result<(), Error> {
+        self.0.cs_low()?;
+        let result = self.read_inner(blocks, start_block_idx).await;
+        self.0.cs_high()?;
+        result
+    }
+
+    /// Write one or more blocks, starting at the given block index.
+    async fn write(&self, blocks: &[Block], start_block_idx: BlockIdx) -> Result<(), Error> {
+        self.0.cs_low()?;
+        let result = self.write_inner(blocks, start_block_idx).await;
+        self.0.cs_high()?;
+        result
+    }
+
+    /// Determine how many blocks this device can hold.
+    async fn num_blocks(&self) -> Result<BlockCount, Error> {
+        let num_bytes = self.card_size_bytes().await?;
+        let num_blocks = (num_bytes / 512) as u32;
+        Ok(BlockCount(num_blocks))
+    }
+}

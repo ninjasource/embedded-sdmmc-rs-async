@@ -16,6 +16,7 @@ pub mod fat;
 pub mod filesystem;
 pub mod sdmmc;
 pub mod sdmmc_proto;
+pub mod file_reader;
 
 pub use crate::blockdevice::{Block, BlockCount, BlockDevice, BlockIdx};
 pub use crate::fat::FatVolume;
