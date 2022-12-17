@@ -13,13 +13,14 @@ mod structure;
 
 pub mod blockdevice;
 pub mod fat;
+pub mod file_reader;
 pub mod filesystem;
 pub mod sdmmc;
 pub mod sdmmc_proto;
-pub mod file_reader;
 
 pub use crate::blockdevice::{Block, BlockCount, BlockDevice, BlockIdx};
 pub use crate::fat::FatVolume;
+pub use crate::file_reader::FileReader;
 pub use crate::sdmmc::Error as SdMmcError;
 pub use crate::sdmmc::{BlockSpi, SdMmcSpi};
 

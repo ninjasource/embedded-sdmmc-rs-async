@@ -1,3 +1,5 @@
+use core::borrow::BorrowMut;
+
 use defmt::info;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal_async::spi::SpiBus;
@@ -72,6 +74,7 @@ where
             .unwrap();
 
         self.file = Some(file);
+        self.volume = Some(volume);
         self.read_index = 0;
     }
 
@@ -79,6 +82,8 @@ where
     // It reads the SD card in 512 KB chunks to prevent unecessary reads and keeps an
     // internal buffer to cache bytes for the next read call
     pub async fn read(&mut self, into_buf: &mut [u8]) -> bool {
+        let volume = self.volume.as_ref().expect("file not open");
+
         if into_buf.len() > self.file_buffer.len() {
             panic!(
                 "into_buf len too large. Max len: {}",
@@ -100,16 +105,13 @@ where
             // fill the file_buffer
             let len = self
                 .sd_controller
-                .read(
-                    self.volume.as_ref().unwrap(),
-                    &mut file,
-                    &mut self.file_buffer,
-                )
+                .read(volume, &mut file, &mut self.file_buffer)
                 .await
                 .unwrap();
 
             if len != SD_CARD_CHUNK_LEN {
                 // end of file reached, consume the file
+                info!("end of file");
                 self.close();
                 self.open().await;
                 return false;
