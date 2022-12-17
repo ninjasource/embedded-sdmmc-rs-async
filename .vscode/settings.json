@@ -13,6 +13,7 @@
     //"time-tick-16mhz",
     //"defmt-timestamp-uptime",
     "nightly",
+    "defmt",
     //"unstable-traits",
   ],
   "rust-analyzer.imports.granularity.enforce": true,

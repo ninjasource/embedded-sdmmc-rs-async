@@ -6,4 +6,13 @@ edition = "2021"
 [dependencies]
 embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = ["defmt", "integrated-timers"] }
 embassy-nrf = { version = "0.1.0", path = "../embassy/embassy-nrf", features = ["defmt", "nrf52840", "time-driver-rtc1", "gpiote", "unstable-pac"] }
-defmt = "0.3"
+log = { version = "0.4", default-features = false, optional = true }
+defmt = { version = "0.3", optional = true }
+embedded-hal-async = { version = "=0.2.0-alpha.0"}
+embedded-hal = "0.2.7"
+byteorder = { version = "1", default-features = false }
+#embedded-hal-async = { git = "https://github.com/rust-embedded/embedded-hal.git" }
+
+[features]
+default = [ "defmt" ]
+# NOTE: other posibility is "log"
