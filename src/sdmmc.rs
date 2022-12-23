@@ -542,8 +542,20 @@ where
         }
 
         for b in buffer.iter_mut() {
-            *b = self.0.receive().await?;
+            *b = 0xFF;
         }
+
+        self.0
+            .spi
+            .borrow_mut()
+            .transfer_in_place(buffer)
+            .await
+            .unwrap();
+
+        /*
+        for b in buffer.iter_mut() {
+            *b = self.0.receive().await?;
+        }*/
 
         let mut crc = u16::from(self.0.receive().await?);
         crc <<= 8;
