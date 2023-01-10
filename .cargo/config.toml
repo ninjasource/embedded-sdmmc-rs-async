@@ -19,7 +19,7 @@ rustflags = [
 [build]
 # cross-compile to this target
 target = "thumbv7em-none-eabihf" # = ARM Cortex-M4
-#target = "thumbv8m.main-none-eabihf"
+# target = "thumbv8m.main-none-eabihf" # = ARM Cortex-M33
 
 [env]
 DEFMT_LOG="trace"

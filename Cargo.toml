@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = ["defmt", "integrated-timers"] }
-embassy-nrf = { version = "0.1.0", path = "../embassy/embassy-nrf", features = ["defmt", "nrf52840", "time-driver-rtc1", "gpiote", "unstable-pac"] }
+#embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = ["defmt", "integrated-timers"] }
+#embassy-nrf = { version = "0.1.0", path = "../embassy/embassy-nrf", features = ["defmt", "nrf9160-ns", "time-driver-rtc1", "gpiote", "unstable-pac"] }
+embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = [ "integrated-timers"] }
+embassy-nrf = { version = "0.1.0", path = "../embassy/embassy-nrf", features = ["nrf9160-ns", "time-driver-rtc1", "gpiote", "unstable-pac"] }
 log = { version = "0.4", default-features = false, optional = true }
 defmt = { version = "0.3", optional = true }
 embedded-hal-async = { version = "=0.2.0-alpha.0"}
@@ -16,4 +18,6 @@ byteorder = { version = "1", default-features = false }
 [features]
 defmt-log = [ "defmt" ]
 default = [ "defmt-log" ]
+#default = [ "log" ]
+
 # NOTE: other posibility is "log"
