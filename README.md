@@ -1,3 +1,9 @@
+This repo is DEPRECATED!!
+
+Please use https://github.com/ninjasource/embedded-sdmmc-rs.git branch `add-async-support`
+
+
+
 # embedded-sdmmc-rs-async
 An async version of the embedded-sdmmc-rs library
 
